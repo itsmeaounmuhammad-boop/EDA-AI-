@@ -61,19 +61,39 @@ if uploaded_file is not None:
         ax.set_ylabel("Frequency")
         st.pyplot(fig)
     else:
-        fig, ax = plt.subplots(figsize=(8, 5))
         value_counts = df[selected_column].value_counts()
-        value_counts.plot(kind="bar", ax=ax)
+        n_unique = value_counts.shape[0]
+        MAX_CATEGORIES = 15
+
+        if n_unique > MAX_CATEGORIES:
+            st.warning(
+                f"'{selected_column}' has {n_unique} unique values, which is too many "
+                f"to plot individually (likely an identifier-like column, e.g. Name, "
+                f"Ticket, or Cabin). Showing the top {MAX_CATEGORIES} most frequent "
+                f"values grouped with an 'Other' category."
+            )
+            top_counts = value_counts.head(MAX_CATEGORIES)
+            other_count = value_counts.iloc[MAX_CATEGORIES:].sum()
+            if other_count > 0:
+                top_counts = pd.concat([top_counts, pd.Series({"Other": other_count})])
+            plot_counts = top_counts
+        else:
+            plot_counts = value_counts
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        plot_counts.plot(kind="bar", ax=ax)
         ax.set_title(f"Bar Chart of {selected_column}")
         ax.set_xlabel(selected_column)
         ax.set_ylabel("Count")
-        total = value_counts.sum()
-        for i, v in enumerate(value_counts):
+
+        total = plot_counts.sum()
+        for i, v in enumerate(plot_counts):
             pct = (v / total) * 100
             ax.text(i, v, f"{pct:.1f}%", ha="center", va="bottom", fontsize=8)
+
         plt.xticks(rotation=45, ha="right")
+        plt.tight_layout()
         st.pyplot(fig)
-        
+
 else:
     st.info("Please upload a CSV file to start EDA.")
-
